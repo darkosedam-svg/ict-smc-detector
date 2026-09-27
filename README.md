@@ -1,5 +1,7 @@
 # ict-smc-detector
 
+[![CI](https://github.com/darkosedam-svg/ict-smc-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/darkosedam-svg/ict-smc-detector/actions/workflows/ci.yml)
+
 Detection of Fair Value Gaps, Order Blocks, and Break of Structure on OHLCV data. Pure detection — no strategy logic, no entry/exit signals, no opinions about how you should trade them.
 
 Vectorized where it matters. Tested. Visualizable. Drop into any backtest framework or trading system as the detection layer.
@@ -133,6 +135,12 @@ pytest tests/
 ```
 
 21 tests should pass.
+
+## Hire me
+
+I build and harden trading infrastructure: execution engines, exchange connectors, backtesting pipelines, and pattern-detection layers that don't have lookahead bias. Available for custom work and ongoing retainers around trading-infrastructure, execution, and backtesting engineering.
+
+Contact: darko.sedam@gmail.com
 
 ## License
 

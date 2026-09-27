@@ -43,6 +43,9 @@ Homepage = "https://github.com/GitBot/ict-smc-detector"
 Repository = "https://github.com/GitBot/ict-smc-detector"
 Issues = "https://github.com/GitBot/ict-smc-detector/issues"
 
+[tool.hatch.build.targets.wheel]
+packages = ["ict_smc"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
