@@ -206,6 +206,22 @@ class TestBoSDetection:
         assert len(collapsed) == 3
         assert [e.direction for e in collapsed] == ["bullish", "bearish", "bullish"]
 
+    def test_filter_consecutive_keeps_last_of_run(self):
+        # filter_consecutive_bos keeps the LAST event of each same-direction
+        # run, not the first. Pin that explicitly (by identity and timestamp)
+        # so a future change can't silently flip the direction of the
+        # collapse without a test catching it.
+        first = BoS(pd.Timestamp("2024-01-01 00:00"), "bullish", 10, 11)
+        middle = BoS(pd.Timestamp("2024-01-01 01:00"), "bullish", 10.5, 11.5)
+        last = BoS(pd.Timestamp("2024-01-01 02:00"), "bullish", 11, 12)
+        events = [first, middle, last]
+
+        collapsed = filter_consecutive_bos(events)
+
+        assert len(collapsed) == 1
+        assert collapsed[0] is last
+        assert collapsed[0].timestamp == pd.Timestamp("2024-01-01 02:00")
+
 
 # -----------------------------------------------------------------------------
 # Order Block detection
@@ -304,11 +320,36 @@ class TestPerformance:
         df = _make_bars(bars)
 
         import time
+
+        # Calibrate against this machine's *current* load: time a small,
+        # fixed numpy workload right before the real one. On an unloaded
+        # machine this takes on the order of 0.01-0.02s; on a machine with
+        # a browser/IDE/other process saturating the CPU, both the
+        # calibration and the real detection slow down together, so
+        # scaling the budget by the calibration keeps the assertion
+        # meaningful (it still catches an actual algorithmic regression)
+        # instead of flaking on wall-clock alone (this was observed to
+        # fail at 1.21s vs. a fixed 1.0s budget on a loaded machine).
+        calibration_start = time.perf_counter()
+        _ = np.cumsum(np.random.RandomState(0).randn(2_000_000))
+        calibration_time = time.perf_counter() - calibration_start
+
         start = time.perf_counter()
         fvgs = detect_fvgs(df, track_mitigation=False)
         detection_time = time.perf_counter() - start
 
-        # Should be well under 1 second on 10K bars
-        assert detection_time < 1.0, f"Detection took {detection_time:.2f}s"
+        # Reference machine: calibration ~0.02-0.16s, detection ~0.3-0.4s,
+        # i.e. detection_time / calibration_time is comfortably under 15
+        # even under noticeable background load. Scale the budget by that
+        # ratio, with a floor so a fast machine doesn't get an unreasonably
+        # tight budget. (A 50x multiplier let the budget balloon to 8s on a
+        # loaded machine, which stopped catching real regressions — 15x
+        # keeps it in the 2-3s range under load while still passing on a
+        # quiet machine.)
+        budget = max(1.0, calibration_time * 15)
+        assert detection_time < budget, (
+            f"Detection took {detection_time:.2f}s against a budget of "
+            f"{budget:.2f}s (calibration: {calibration_time:.4f}s)"
+        )
         # Random walk should produce at least some FVGs
         assert len(fvgs) > 0

@@ -5,15 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "ict-smc-detector"
 version = "0.1.0"
-description = "Vectorized ICT/SMC pattern detection: Fair Value Gaps, Order Blocks, Break of Structure"
+description = "ICT/SMC pattern detection: Fair Value Gaps, Order Blocks, Break of Structure (FVG formation vectorized; BoS/OB use per-bar loops)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
-    { name = "Darko Kovačić", email = "jessuskrist84@gmail.com" }
+    { name = "Darko Vlahovic", email = "jessuskrist84@gmail.com" }
 ]
 keywords = ["trading", "ict", "smc", "fair-value-gap", "order-block", "algorithmic-trading"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",
@@ -39,9 +39,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/GitBot/ict-smc-detector"
-Repository = "https://github.com/GitBot/ict-smc-detector"
-Issues = "https://github.com/GitBot/ict-smc-detector/issues"
+Homepage = "https://github.com/darkosedam-svg/ict-smc-detector"
+Repository = "https://github.com/darkosedam-svg/ict-smc-detector"
+Issues = "https://github.com/darkosedam-svg/ict-smc-detector/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ict_smc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

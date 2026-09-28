@@ -1,8 +1,10 @@
 # ict-smc-detector
 
+[![CI](https://github.com/darkosedam-svg/ict-smc-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/darkosedam-svg/ict-smc-detector/actions/workflows/ci.yml)
+
 Detection of Fair Value Gaps, Order Blocks, and Break of Structure on OHLCV data. Pure detection — no strategy logic, no entry/exit signals, no opinions about how you should trade them.
 
-Vectorized where it matters. Tested. Visualizable. Drop into any backtest framework or trading system as the detection layer.
+The raw FVG detection pass is vectorized (pandas boolean masks over shifted columns) and runs in O(n). Mitigation tracking, Break-of-Structure, and Order Block detection walk the bar series with per-bar Python loops instead — correct, but not vectorized numpy: O(n) typical for mitigation tracking, O(n · lookback) for BoS and Order Block detection (see the Performance table below). Tested. Drop into any backtest framework or trading system as the detection layer.
 
 ## Why this exists
 
@@ -12,11 +14,18 @@ Detection should be a commodity. The edge in trading these concepts is in *how* 
 
 ## Install
 
-```bash
-pip install ict-smc-detector
+Not on PyPI yet. Install from GitHub:
 
-# Or with visualization extras (matplotlib)
-pip install ict-smc-detector[viz]
+```bash
+pip install git+https://github.com/darkosedam-svg/ict-smc-detector.git
+```
+
+Or clone and install in editable mode:
+
+```bash
+git clone https://github.com/darkosedam-svg/ict-smc-detector
+cd ict-smc-detector
+pip install -e .
 ```
 
 Requires Python 3.10+.
@@ -51,7 +60,7 @@ bos_events = detect_bos(df, lookback=20, min_break_bps=10)
 | Order Block | `detect_order_blocks(df)` | List of `OrderBlock` objects (last opposite candle before BoS) |
 | Break of Structure | `detect_bos(df)` | List of `BoS` events with direction and broken level |
 
-All three concepts include mitigation tracking — the timestamp price first re-entered the zone after formation. Critical for backtesting: an unmitigated FVG from 3 weeks ago is a different signal from one that just formed.
+FVG and Order Block both include mitigation tracking — the timestamp price first re-entered the zone after formation. BoS does not; a break either happened or it didn't, so there's no zone to re-enter. Mitigation is critical for backtesting: an unmitigated FVG from 3 weeks ago is a different signal from one that just formed.
 
 ## Filtering
 
@@ -68,31 +77,35 @@ significant = filter_fvgs(
     min_height=df["close"].mean() * 0.001,  # 10 bps minimum
 )
 
-# During strong trends, BoS fires repeatedly. Collapse to first-of-run.
+# During strong trends, BoS fires repeatedly. Collapse to last-of-run.
 regime_changes = filter_consecutive_bos(bos_events)
 ```
 
 ## Visualization
 
-```bash
-pip install ict-smc-detector[viz]
-python examples/visualize.py
-```
-
-Produces a chart with candlesticks, FVG zones (faint), and Order Block zones (saturated):
-
-![Example output](examples/output.png)
+Not shipped yet. There is no `[viz]` extra and no `examples/` directory in
+this repo despite an earlier version of this README describing one — that
+was aspirational, not real. The `FVG`, `OrderBlock`, and `BoS` objects are
+plain dataclasses (see `ict_smc/types.py`), so plotting them with
+matplotlib or plotly yourself is straightforward, just not included.
 
 ## Performance
 
-| Operation | Bars | Time (M2 MacBook) |
-|---|---|---|
-| FVG detection (vectorized, no mitigation) | 10,000 | ~30 ms |
-| FVG detection with mitigation tracking | 10,000 | ~120 ms |
-| Order Block detection | 10,000 | ~80 ms |
-| BoS detection | 10,000 | ~40 ms |
+Rough complexity, not benchmarked numbers (the previous version of this
+README quoted specific millisecond figures on unspecified hardware that
+were never actually measured for this codebase — removed rather than
+repeated):
 
-All operations are O(n) in bar count.
+| Operation | Implementation | Complexity |
+|---|---|---|
+| FVG formation detection | Vectorized pandas boolean masks | O(n) |
+| FVG mitigation tracking | Per-bar Python loop over open FVGs | O(n) typical, worse if many FVGs stay open simultaneously |
+| BoS detection | Per-bar Python loop computing a rolling max/min slice | O(n · lookback) |
+| Order Block detection | Runs BoS, then a bounded backward scan per BoS event | O(n · lookback) plus O(max_search_back) per BoS event |
+
+If you need this fast at large bar counts, the rolling max/min in `bos.py`
+is a good candidate to replace with `pandas.Series.rolling(...).max()` —
+it isn't vectorized today.
 
 ## What this library is NOT
 
@@ -101,16 +114,16 @@ All operations are O(n) in bar count.
 - ❌ Not a backtest framework
 - ❌ Not a charting library
 
-It detects four things correctly and exposes them as Python objects. That's it.
+It detects three things correctly and exposes them as Python objects. That's it.
 
 For strategy implementation on top, pair with:
 - A backtest framework (vectorbt, backtrader)
-- An execution layer (e.g., [`hyperliquid-execution-toolkit`](https://github.com/GitBot/hyperliquid-execution-toolkit) for crypto perps)
+- An execution layer (e.g., [`hyperliquid-execution-toolkit`](https://github.com/darkosedam-svg/hyperliquid-execution-toolkit) for crypto perps — note that toolkit's order-placement methods are themselves still stubs)
 - Your own signal logic
 
 ## Common gotchas
 
-**1. Lookahead bias.** This library carefully avoids it. The BoS detector uses `.shift(1)` on the rolling extreme so each bar is compared against *prior* bars only. If you build extensions, preserve this property.
+**1. Lookahead bias.** This library carefully avoids it. The BoS detector computes each bar's rolling extreme from an explicit slice of the *prior* `lookback` bars (`highs[i - lookback : i]`, excluding bar `i` itself), so each bar is compared against prior bars only. If you build extensions, preserve this property.
 
 **2. Multiple FVGs in tight ranges.** During fast moves, multiple overlapping FVGs can form in 3-bar windows. The library returns all of them. Whether to merge or pick deepest is a strategy decision — handle it downstream.
 
@@ -126,13 +139,19 @@ PRs welcome. The bar is "would this detection match what an experienced ICT trad
 
 ```bash
 # Run the test suite
-git clone https://github.com/GitBot/ict-smc-detector
+git clone https://github.com/darkosedam-svg/ict-smc-detector
 cd ict-smc-detector
 pip install -e .[dev]
 pytest tests/
 ```
 
-21 tests should pass.
+22 tests should pass.
+
+## Hire me
+
+I build and harden trading infrastructure: execution engines, exchange connectors, backtesting pipelines, and pattern-detection layers. Available for custom work and ongoing retainers around trading-infrastructure, execution, and backtesting engineering.
+
+Contact: jessuskrist84@gmail.com
 
 ## License
 
@@ -140,11 +159,10 @@ MIT. Use it for anything.
 
 ## Who built this
 
-Darko Kovačić — independent algo-trading systems engineer. I build production execution infrastructure for crypto perps and DEXs. Available for paid work — strategy implementation, custom detection extensions, full system builds.
+Darko Vlahovic — independent algo-trading systems engineer. Available for paid work — strategy implementation, custom detection extensions, full system builds.
 
-- 🌐 [Website](https://jessuskrist84.github.io)
-- 🐦 [Twitter](https://twitter.com/jessuskrist84)
-- ✉️ [Email](jessuskrist84@gmail.com)
+- 🌐 [github.com/darkosedam-svg](https://github.com/darkosedam-svg)
+- ✉️ [Email](mailto:jessuskrist84@gmail.com)
 
 ---
 

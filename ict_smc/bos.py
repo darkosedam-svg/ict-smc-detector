@@ -4,8 +4,9 @@ A Break of Structure occurs when price closes beyond a prior swing
 high (bullish BoS) or swing low (bearish BoS) established within a
 lookback window.
 
-Detection is vectorized using rolling max/min over the lookback window,
-giving O(n) complexity.
+Detection walks the bar series with a per-bar Python loop computing a
+rolling max/min slice over the lookback window — correct and simple,
+but not vectorized numpy. O(n * lookback) complexity.
 """
 
 from __future__ import annotations

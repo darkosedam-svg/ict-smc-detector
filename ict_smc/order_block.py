@@ -41,7 +41,7 @@ def detect_order_blocks(
         min_break_bps: Minimum BoS magnitude in bps.
         max_search_back: Max bars to search backwards for the OB candle.
         track_mitigation: Annotate each OB with mitigation timestamp.
-        collapse_runs: If True (default), only first BoS in each
+        collapse_runs: If True (default), only the last BoS in each
             consecutive same-direction run is used. Recommended.
 
     Returns:
