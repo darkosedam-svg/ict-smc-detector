@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "ict-smc-detector"
 version = "0.1.0"
-description = "Vectorized ICT/SMC pattern detection: Fair Value Gaps, Order Blocks, Break of Structure"
+description = "ICT/SMC pattern detection: Fair Value Gaps, Order Blocks, Break of Structure (FVG formation vectorized; BoS/OB use per-bar loops)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
@@ -13,7 +13,7 @@ authors = [
 ]
 keywords = ["trading", "ict", "smc", "fair-value-gap", "order-block", "algorithmic-trading"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",

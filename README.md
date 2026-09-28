@@ -4,7 +4,7 @@
 
 Detection of Fair Value Gaps, Order Blocks, and Break of Structure on OHLCV data. Pure detection — no strategy logic, no entry/exit signals, no opinions about how you should trade them.
 
-The raw FVG detection pass is vectorized (pandas boolean masks over shifted columns). Mitigation tracking, Break-of-Structure, and Order Block detection walk the bar series with per-bar Python loops instead — correct and O(n)-ish, but not vectorized numpy. Tested. Visualizable. Drop into any backtest framework or trading system as the detection layer.
+The raw FVG detection pass is vectorized (pandas boolean masks over shifted columns). Mitigation tracking, Break-of-Structure, and Order Block detection walk the bar series with per-bar Python loops instead — correct and O(n)-ish, but not vectorized numpy. Tested. Drop into any backtest framework or trading system as the detection layer.
 
 ## Why this exists
 
@@ -60,7 +60,7 @@ bos_events = detect_bos(df, lookback=20, min_break_bps=10)
 | Order Block | `detect_order_blocks(df)` | List of `OrderBlock` objects (last opposite candle before BoS) |
 | Break of Structure | `detect_bos(df)` | List of `BoS` events with direction and broken level |
 
-All three concepts include mitigation tracking — the timestamp price first re-entered the zone after formation. Critical for backtesting: an unmitigated FVG from 3 weeks ago is a different signal from one that just formed.
+FVG and Order Block both include mitigation tracking — the timestamp price first re-entered the zone after formation. BoS does not; a break either happened or it didn't, so there's no zone to re-enter. Mitigation is critical for backtesting: an unmitigated FVG from 3 weeks ago is a different signal from one that just formed.
 
 ## Filtering
 
@@ -77,7 +77,7 @@ significant = filter_fvgs(
     min_height=df["close"].mean() * 0.001,  # 10 bps minimum
 )
 
-# During strong trends, BoS fires repeatedly. Collapse to first-of-run.
+# During strong trends, BoS fires repeatedly. Collapse to last-of-run.
 regime_changes = filter_consecutive_bos(bos_events)
 ```
 
@@ -114,7 +114,7 @@ it isn't vectorized today.
 - ❌ Not a backtest framework
 - ❌ Not a charting library
 
-It detects four things correctly and exposes them as Python objects. That's it.
+It detects three things correctly and exposes them as Python objects. That's it.
 
 For strategy implementation on top, pair with:
 - A backtest framework (vectorbt, backtrader)
@@ -123,7 +123,7 @@ For strategy implementation on top, pair with:
 
 ## Common gotchas
 
-**1. Lookahead bias.** This library carefully avoids it. The BoS detector uses `.shift(1)` on the rolling extreme so each bar is compared against *prior* bars only. If you build extensions, preserve this property.
+**1. Lookahead bias.** This library carefully avoids it. The BoS detector computes each bar's rolling extreme from an explicit slice of the *prior* `lookback` bars (`highs[i - lookback : i]`, excluding bar `i` itself), so each bar is compared against prior bars only. If you build extensions, preserve this property.
 
 **2. Multiple FVGs in tight ranges.** During fast moves, multiple overlapping FVGs can form in 3-bar windows. The library returns all of them. Whether to merge or pick deepest is a strategy decision — handle it downstream.
 
@@ -145,7 +145,7 @@ pip install -e .[dev]
 pytest tests/
 ```
 
-21 tests should pass.
+22 tests should pass.
 
 ## Hire me
 
