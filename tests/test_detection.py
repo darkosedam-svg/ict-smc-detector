@@ -338,11 +338,15 @@ class TestPerformance:
         fvgs = detect_fvgs(df, track_mitigation=False)
         detection_time = time.perf_counter() - start
 
-        # Reference machine: calibration ~0.02s, detection well under 1s,
-        # i.e. detection_time / calibration_time is well under 50. Scale
-        # the budget by the same ratio, with a floor so a fast machine
-        # doesn't get an unreasonably tight budget.
-        budget = max(1.0, calibration_time * 50)
+        # Reference machine: calibration ~0.02-0.16s, detection ~0.3-0.4s,
+        # i.e. detection_time / calibration_time is comfortably under 15
+        # even under noticeable background load. Scale the budget by that
+        # ratio, with a floor so a fast machine doesn't get an unreasonably
+        # tight budget. (A 50x multiplier let the budget balloon to 8s on a
+        # loaded machine, which stopped catching real regressions — 15x
+        # keeps it in the 2-3s range under load while still passing on a
+        # quiet machine.)
+        budget = max(1.0, calibration_time * 15)
         assert detection_time < budget, (
             f"Detection took {detection_time:.2f}s against a budget of "
             f"{budget:.2f}s (calibration: {calibration_time:.4f}s)"

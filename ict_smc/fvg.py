@@ -10,8 +10,12 @@ Mitigation:
   the zone counts. This is stricter than the "full fill" model and is
   the more common ICT convention.
 
-Both functions are vectorized and run in O(n) for detection. Mitigation
-walks the bar series once with a working set of open FVGs, also O(n).
+Only formation detection (the bullish/bearish boolean masks in
+detect_fvgs) is vectorized pandas, O(n). Everything else in this module
+is a plain per-item Python loop, not vectorized: mitigation tracking
+(inside detect_fvgs) walks the bar series once with a working set of
+open FVGs, O(n) typical; filter_fvgs is a list comprehension over the
+FVGs, O(n).
 """
 
 from __future__ import annotations

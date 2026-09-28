@@ -4,7 +4,7 @@
 
 Detection of Fair Value Gaps, Order Blocks, and Break of Structure on OHLCV data. Pure detection — no strategy logic, no entry/exit signals, no opinions about how you should trade them.
 
-The raw FVG detection pass is vectorized (pandas boolean masks over shifted columns). Mitigation tracking, Break-of-Structure, and Order Block detection walk the bar series with per-bar Python loops instead — correct and O(n)-ish, but not vectorized numpy. Tested. Drop into any backtest framework or trading system as the detection layer.
+The raw FVG detection pass is vectorized (pandas boolean masks over shifted columns) and runs in O(n). Mitigation tracking, Break-of-Structure, and Order Block detection walk the bar series with per-bar Python loops instead — correct, but not vectorized numpy: O(n) typical for mitigation tracking, O(n · lookback) for BoS and Order Block detection (see the Performance table below). Tested. Drop into any backtest framework or trading system as the detection layer.
 
 ## Why this exists
 
